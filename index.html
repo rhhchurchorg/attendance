@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+    #reader {
+      width: 100%;
+      margin: 20px auto;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+    }
+    #result {
+      margin: 20px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #0069d9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Attendance Scanner</h1>
+  <p>Scan a QR code to log attendance</p>
+  
+  <div id="reader"></div>
+  <div id="result"></div>
+  
+  <script>
+    // Replace with your Google Apps Script Web App URL
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6RwEGKGV7Zn5mEi9Hj_Lxv-ULJhk6xTtXjUiwScnJTnBN0OKQd39Q-MpXwJXBUEBb/exec";
+    
+    const resultContainer = document.getElementById('result');
+    let lastScanned = null;
+    
+    function onScanSuccess(decodedText) {
+      // Prevent duplicate scans of the same code within 5 seconds
+      if (lastScanned === decodedText && (Date.now() - lastScanTime) < 5000) {
+        return;
+      }
+      
+      lastScanned = decodedText;
+      lastScanTime = Date.now();
+      
+      // Show scanning feedback
+      resultContainer.textContent = `Scanned: ${decodedText}`;
+      resultContainer.className = '';
+      
+      // Send data to Google Sheets
+      logAttendance(decodedText);
+    }
+    
+    function onScanError(error) {
+      // Handle scan error
+      resultContainer.textContent = `Scan error: ${error}`;
+      resultContainer.className = 'error';
+    }
+    
+    async function logAttendance(name) {
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: name }),
+        });
+        
+        const result = await response.text();
+        
+        resultContainer.textContent = `Success: ${name} logged at ${new Date().toLocaleString()}`;
+        resultContainer.className = 'success';
+      } catch (error) {
+        resultContainer.textContent = `Error logging attendance: ${error.message}`;
+        resultContainer.className = 'error';
+      }
+    }
+    
+    // Initialize QR scanner
+    const html5QrCode = new Html5Qrcode("reader");
+    const config = { fps: 10, qrbox: 250 };
+    
+    html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      onScanSuccess,
+      onScanError
+    ).catch(err => {
+      resultContainer.textContent = `Could not start scanner: ${err}`;
+      resultContainer.className = 'error';
+    });
+  </script>
+</body>
+</html>
