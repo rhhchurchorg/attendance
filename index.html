@@ -106,7 +106,8 @@
     // Initialize QR scanner
     const html5QrCode = new Html5Qrcode("reader");
     const config = { fps: 10, qrbox: 250 };
-    
+
+/*    
     html5QrCode.start(
       { facingMode: "environment" },
       config,
@@ -116,6 +117,42 @@
       resultContainer.textContent = `Could not start scanner: ${err}`;
       resultContainer.className = 'error';
     });
+*/
+
+// Replace the existing html5QrCode.start() call with this:
+
+async function startScanner() {
+  try {
+    // First request camera permission explicitly
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
+    
+    // If we get here, permission was granted
+    stream.getTracks().forEach(track => track.stop());
+    
+    // Now start the scanner
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      onScanSuccess,
+      onScanError
+    );
+  } catch (err) {
+    resultContainer.textContent = `Camera access required: ${err.message}`;
+    resultContainer.className = 'error';
+    
+    // Add a button to retry
+    const retryBtn = document.createElement('button');
+    retryBtn.textContent = 'Grant Camera Access';
+    retryBtn.onclick = startScanner;
+    resultContainer.appendChild(document.createElement('br'));
+    resultContainer.appendChild(retryBtn);
+  }
+}
+
+// Start the scanner when page loads
+startScanner();
   </script>
 </body>
 </html>
